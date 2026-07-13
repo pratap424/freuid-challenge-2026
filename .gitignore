@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+outputs/
+logs/
+data/
+checkpoints/
+slim_weights/
+submission*.csv
+*.pth
+*.npy
+.DS_Store
