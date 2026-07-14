@@ -108,7 +108,8 @@ class FREUIDDataset(Dataset):
             image_id = str(row[self.image_col])
             
             # Try multiple patterns
-            for subdir in ['public_test/public_test', 'train/train', 'public_test', 'train']:
+            for subdir in ['private_test/private_test', 'public_test/public_test',
+                           'train/train', 'public_test', 'train']:
                 for ext in ['.jpeg', '.jpg', '.png']:
                     path = os.path.join(self.data_dir, subdir, image_id + ext)
                     if os.path.exists(path):
