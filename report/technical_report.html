@@ -1,0 +1,80 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><style>
+body{font-family:Georgia,serif;max-width:800px;margin:40px auto;line-height:1.5;color:#111}
+h1{font-size:20pt;border-bottom:2px solid #333;padding-bottom:8px}
+h2{font-size:14pt;margin-top:24px} code{background:#f0f0f0;padding:1px 4px;font-size:9pt}
+table{border-collapse:collapse;margin:12px 0} th,td{border:1px solid #999;padding:4px 10px;font-size:10pt}
+th{background:#eee} li{margin:4px 0}</style></head><body><h1>Ensemble-Based Identity Document Fraud Detection for the FREUID Challenge 2026</h1>
+<p>
+<b>Team:</b> Yash (pratap424) · IIT Mandi
+<b>Code:</b> <a href="https://github.com/pratap424/freuid-challenge-2026">https://github.com/pratap424/freuid-challenge-2026</a>
+<b>Weights:</b> <a href="https://www.kaggle.com/datasets/ypsrathore/freuid-2026-pratap424-weights">https://www.kaggle.com/datasets/ypsrathore/freuid-2026-pratap424-weights</a>
+<p>
+<h2>1. Approach overview</h2>
+<p>
+We treat fraud detection as binary image classification with an ensemble designed to
+maximize recall of fraudulent documents at the strict APCER@1%BPCER operating point of
+the FREUID metric.
+<p>
+<b>Models (all trained June 30 – July 2, 2026, before the code freeze):</b>
+<p>
+<table>
+<tr><th>Backbone</th><th>Input</th><th>Folds</th><th>Pretraining</th></tr>
+<tr><td>ConvNeXt-Small (<code>fb_in22k_ft_in1k_384</code>)</td><td>384px</td><td>5</td><td>ImageNet-22k→1k</td></tr>
+<tr><td>EVA02-Large (<code>mim_m38m_ft_in22k_in1k</code>)</td><td>448px</td><td>1 (fold 0)</td><td>MIM M38M</td></tr>
+</table>An EfficientNet-B3 (5 folds) was also trained but <b>excluded</b> after out-of-fold analysis
+showed it degraded the ensemble (OOF FREUID 0.107 vs 0.00008 for ConvNeXt; public LB
+confirmed: 0.288 alone).
+<p>
+<h2>2. Training</h2>
+<p>
+<li>Stratified 5-fold CV by <code>label × document type</code> (10 strata)</li>
+<li>Loss: 0.5·BCE + 0.5·Focal (γ=2, α=0.75), label smoothing 0.1</li>
+<li>AdamW, cosine schedule with 2-epoch warmup, AMP, EMA (decay 0.9998)</li>
+<li>Mixup (α=0.4) / CutMix (α=1.0) at p=0.5</li>
+<li>Heavy augmentation targeting capture-condition shift: geometric (RRC, flip,</li>
+  shift-scale-rotate, perspective), photometric (color jitter, brightness/contrast),
+  degradation (Gaussian noise, JPEG compression 30–95, downscale 0.4–0.9, blur),
+  occlusion (coarse dropout). A silent albumentations-v2 API incompatibility initially
+  disabled 4 of these; fixing it improved public LB from 0.144 to 0.133 (single fold).
+<p>
+<h2>3. Inference and ensembling</h2>
+<p>
+<li>8-view TTA on public test; staged TTA on private test (identity + horizontal flip)</li>
+<li>All model×fold×TTA predictions aggregated as: <b>α·mean + (1−α)·max</b> with α=0.5.</li>
+  The max term preserves fraud evidence found by any single ensemble member — at the
+  1% BPCER operating point, a missed fraud is far costlier than a slightly elevated
+  bona-fide score. Public LB validated this: α=0.5 (0.07894) > α=0.7 (0.07955) >
+  plain mean (0.08022) > power-mean p=3 (0.07974) ≫ rank averaging (0.12695).
+<li>Score calibration (isotonic/Platt) was evaluated and rejected: both FREUID components</li>
+  are ranking-based, so monotonic recalibration cannot change the score.
+<p>
+<h2>4. Results</h2>
+<p>
+<table>
+<tr><th>Submission</th><th>Public LB</th></tr>
+<tr><td>EfficientNet-B3 f0 (excluded model)</td><td>0.28818</td></tr>
+<tr><td>ConvNeXt-Small f0</td><td>0.13277</td></tr>
+<tr><td>ConvNeXt-Small 5-fold</td><td>0.10950</td></tr>
+<tr><td>+ TTA</td><td>0.09786</td></tr>
+<tr><td>+ EVA02-Large f0</td><td>0.08237</td></tr>
+<tr><td>+ 8-view TTA everywhere, maxblend α=0.7</td><td>0.07955</td></tr>
+<tr><td><b>+ maxblend α=0.5 (final public config)</b></td><td><b>0.07894</b></td></tr>
+<tr><td>Full submission incl. real private predictions (v1, v2)</td><td>0.07894 public; private hidden</td></tr>
+</table>Final submissions predict all 142,818 test rows with model outputs (no placeholder
+values). Private-test inference used the identical frozen weights with staged TTA
+(1, 2, then 8 views).
+<p>
+<h2>5. Code-freeze compliance</h2>
+<p>
+All weights predate the July 13 private-test release (training logs and file
+timestamps available for audit). Post-freeze work consisted exclusively of:
+inference on private images with unchanged weights, ensemble aggregation,
+documentation, and packaging. A fold-1 EVA02 run accidentally launched on July 13
+was terminated mid-run and its checkpoint deleted; it contributes to nothing.
+<p>
+<h2>6. Reproducibility</h2>
+<p>
+<li><code>README.md</code> — full pipeline instructions</li>
+<li><code>Dockerfile</code> — pinned environment</li>
+<li>Hardware: single NVIDIA RTX A5000 (24GB); total training ≈ 60 GPU-hours</li>
+</body></html>

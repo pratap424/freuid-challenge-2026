@@ -2,7 +2,7 @@
 
 **Team:** Yash (pratap424) · IIT Mandi
 **Code:** https://github.com/pratap424/freuid-challenge-2026
-**Weights:** Kaggle dataset `ypsrathore/freuid-2026-pratap424-weights`
+**Weights:** https://www.kaggle.com/datasets/ypsrathore/freuid-2026-pratap424-weights
 
 ## 1. Approach overview
 
@@ -55,7 +55,11 @@ confirmed: 0.288 alone).
 | + EVA02-Large f0 | 0.08237 |
 | + 8-view TTA everywhere, maxblend α=0.7 | 0.07955 |
 | **+ maxblend α=0.5 (final public config)** | **0.07894** |
-| Full submission incl. private predictions | _pending_ |
+| Full submission incl. real private predictions (v1, v2) | 0.07894 public; private hidden |
+
+Final submissions predict all 142,818 test rows with model outputs (no placeholder
+values). Private-test inference used the identical frozen weights with staged TTA
+(1, 2, then 8 views).
 
 ## 5. Code-freeze compliance
 
